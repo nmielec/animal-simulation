@@ -1,0 +1,30 @@
+species:
+  - name: kangaroo
+    attributes:
+      monthly_food_consumption: 3 #arbitrary unit
+      monthly_water_consumption: 4 #arbitrary unit
+      life_span: 30 #years
+      minimum_breeding_age: 5 #years
+      maximum_breeding_age: 20 #years
+      gestation_period: 9 #months
+      minimum_temperature: 20 #F
+      maximum_temperature: 110 #F
+  - name: bear
+    attributes:
+      monthly_food_consumption: 4
+      monthly_water_consumption: 4
+      life_span: 50
+      minimum_breeding_age: 10
+      maximum_breeding_age: 35
+      gestation_period: 12
+      minimum_temperature: 0
+      maximum_temperature: 95
+habitats:
+    - name: plains
+      monthly_food: 100 #arbitrary unit
+      monthly_water: 150 #arbitrary unit
+      average_temperature:
+        summer: 85 #F
+        spring: 60 #F
+        fall: 50 #F
+        winter: 40 # 30 #F
