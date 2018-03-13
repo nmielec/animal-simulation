@@ -3,9 +3,9 @@ import random
 import logging
 import pandas as pd
 
-from habitat import Habitat
-from animal import Animal
-from util import get_data, Gender, month_to_season, Season
+from animalsimulation.habitat import Habitat
+from animalsimulation.animal import Animal
+from animalsimulation.util import get_data, Gender, month_to_season, Season
 
 ANIMAL_DATA, HABITAT_DATA = get_data()
 

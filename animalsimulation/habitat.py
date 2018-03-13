@@ -1,7 +1,7 @@
 import random
 
-from util import month_to_season
-from util import get_data
+from animalsimulation.util import month_to_season
+from animalsimulation.util import get_data
 
 _, HABITAT_DATA = get_data()
 

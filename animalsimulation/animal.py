@@ -1,8 +1,8 @@
 #coding: utf-8
 import uuid
 
-from util import Gender
-from util import get_data
+from animalsimulation.util import Gender
+from animalsimulation.util import get_data
 
 ANIMAL_DATA, _ = get_data()
 
