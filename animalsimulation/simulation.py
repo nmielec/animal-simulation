@@ -5,9 +5,8 @@ import pandas as pd
 
 from animalsimulation.habitat import Habitat
 from animalsimulation.animal import Animal
-from animalsimulation.util import get_data, Gender, month_to_season, Season, DeathCause
+from animalsimulation.util import Gender
 
-ANIMAL_DATA, HABITAT_DATA = get_data()
 
 logging.basicConfig(filename='test.log', filemode='w', level=logging.INFO)
 
@@ -33,29 +32,22 @@ class Simulation(object):
 
     def run_one_month(self):
         """Main method of the simulation, runs one month of the simulation"""
-        self.current_temperature = self.habitat.month_temperature(self.current_month)
+        self.habitat.tick(self.current_month)
+
         logging.info('----------------------------------------------------')
         logging.info('Elapsed months {}'.format(self.months))
         logging.info('{} / {}'.format(self.current_month, self.current_year))
-        logging.info('Temperature {}°'.format(self.current_temperature))
+        logging.info('Temperature {}°'.format(self.habitat.current_temperature))
         logging.info('Habitat reserves {} food, {} water'.format(self.habitat.food_stock, self.habitat.water_stock))
         logging.info(
             '{} animals : {}'.format(
-                len(self.population),
+                len(self.habitat.population),
                 ', '.join((str(animal) for animal
-                           in sorted(self.population, key=lambda a: (a.age, a.id))))
+                           in sorted(self.habitat.population, key=lambda a: (a.age, a.id))))
             )
         )
-        self.feed_animals()
 
-        for animal in self.population:
-            animal.tick(self.current_temperature)
-
-        self.breed_animals()
-        self.replenish_habitat()
-        self.eliminate_dying()
-
-        self.fill_stats()
+        # self.fill_stats()
 
         self.current_month += 1
         if self.current_month == 13:
@@ -63,6 +55,7 @@ class Simulation(object):
             self.current_year += 1
 
         self.months += 1
+
 
     def fill_stats(self):
         self.stats = self.stats.append({
@@ -72,101 +65,10 @@ class Simulation(object):
             'temperature': self.current_temperature,
             'food_stock': self.habitat.food_stock,
             'water_stock': self.habitat.water_stock,
-            'male_population': len([animal for animal in self.population if animal.is_male()]),
-            'female_population': len([animal for animal in self.population if animal.is_female()]),
-            'deaths': self.current_deaths,
+            'male_population': len(self.habitat.population.males()),
+            'female_population': len(self.habitat.population.females()),
+            'deaths': self.habitat.current_deaths,
         }, ignore_index=True)
-
-    def eliminate_dying(self):
-        """Removes animals which are dying from the population and logs the death cause
-
-        TODO: The logical part of this function might be better placed inside the animal class
-        a method of animal checking if it is dying that returns the cause of death which would be logged here
-        """
-        self.current_deaths = 0
-        new_population = []
-        for animal in self.population:
-            death_cause = None
-            if animal.last_drank_months > 1:
-                logging.info('{} died of thirst'.format(animal))
-                death_cause = DeathCause.THIRST
-            elif animal.last_ate_months > 3:
-                logging.info('{} died of hunger'.format(animal))
-                death_cause = DeathCause.HUNGER
-            elif animal.is_old():
-                logging.info('{} died of old age'.format(animal))
-                death_cause = DeathCause.AGE
-            elif animal.cold_for > 1:
-                logging.info('{} died of cold'.format(animal))
-                death_cause = DeathCause.COLD
-            elif animal.hot_for > 1:
-                logging.info('{} died of heat'.format(animal))
-                death_cause = DeathCause.HEAT
-            else:
-                logging.debug('{} survived'.format(animal))
-                new_population.append(animal)
-            if death_cause is not None:
-                # pass
-                animal_stats = self.animal_stats.loc[animal.id]
-                animal_stats.death_cause = death_cause.name.lower()
-                animal_stats.year_death = self.current_year
-                animal_stats.month_death = self.current_month
-                self.current_deaths += 1
-
-        self.population = new_population
-
-
-    def replenish_habitat(self):
-        self.habitat.replenish()
-
-    def breed_animals(self):
-        """This method gets female animal pregnant and checks for new births
-
-        TODO: there might be a better way to do all this, for example check for pregnancy in the animal tick and somehow communicate the new birth to the simulation
-        """
-        available_females = [animal for animal in self.population if animal.can_breed()]
-        available_males = [animal for animal in self.population if animal.is_male()]
-
-        # Get available females pregnant
-        if len(available_males) > 0 and len(available_females) > 0 and month_to_season(self.current_month) == Season.SPRING:
-            num_can_eat = self.habitat.food_stock // ANIMAL_DATA[self.species]['monthly_food_consumption']
-            for female_animal in available_females:
-                if num_can_eat >= len(self.population) or random.random() < 0.005:
-                    female_animal.get_pregnant()
-
-        # End pregnancies
-        new_population = []
-        for animal in self.population:
-            new_population.append(animal)
-            if animal.pregnancy_months_remaining == 0:
-                animal_stats = self.animal_stats.loc[animal.id]
-                animal_stats.children += 1
-                newborn = animal.give_birth()
-                new_population.append(newborn)
-                self.log_animal(newborn)
-
-        self.population = new_population
-
-    def feed_animals(self):
-        """Get animals to eat and drink, and apply consequences on the habitat
-
-        The animals who can drink and eat dependent on the amount of resources left are selected randomly
-
-        TODO: This might be refactored to go into the habitat
-        """
-        random.shuffle(self.population)
-        num_can_eat = self.habitat.food_stock // ANIMAL_DATA[self.species]['monthly_food_consumption']
-        for animal in self.population[:num_can_eat]:
-            logging.debug('Animal {} ate'.format(animal))
-            animal.eat()
-        self.habitat.food_stock -= len(self.population[:num_can_eat]) * ANIMAL_DATA[self.species]['monthly_food_consumption']
-
-        random.shuffle(self.population)
-        num_can_drink = self.habitat.water_stock // ANIMAL_DATA[self.species]['monthly_water_consumption']
-        for animal in self.population[:num_can_drink]:
-            logging.debug('Animal {} drank'.format(animal))
-            animal.drink()
-        self.habitat.water_stock -= len(self.population[:num_can_drink]) * ANIMAL_DATA[self.species]['monthly_water_consumption']
 
 
     def run_n_months(self, n_months):
@@ -262,24 +164,23 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
     sim = Simulation(habitat_type='plains', species='bear', start_month=3)
-    sim.run_while_not_dead(max_years=150)
+    sim.run_while_not_dead(max_years=1)
     logging.info('\n' + str(sim.stats))
 
-    sim.stats.to_csv('stats.csv')
-    sim.animal_stats.to_csv('animal_stats.csv')
+
+    # sim.stats.to_csv('stats.csv')
+    # sim.animal_stats.to_csv('animal_stats.csv')
 
     # print(sim.animal_stats)
-    sim.print_stats()
+    # sim.print_stats()
 
-    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
-    x = sim.stats.elapsed_months / 12
-    ax1.plot(x, sim.stats.food_stock, label='Food stock')
-    ax1.plot(x, sim.stats.water_stock, label='Water stock')
-    ax2.plot(x, sim.stats.male_population, label='Male animals')
-    ax2.plot(x, sim.stats.female_population, label='Female animals')
-    ax1.legend()
-    ax2.legend()
-    plt.show()
-    # logging.info(sim.population)
-    # logging.info(sim)
+    # fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True)
+    # x = sim.stats.elapsed_months / 12
+    # ax1.plot(x, sim.stats.food_stock, label='Food stock')
+    # ax1.plot(x, sim.stats.water_stock, label='Water stock')
+    # ax2.plot(x, sim.stats.male_population, label='Male animals')
+    # ax2.plot(x, sim.stats.female_population, label='Female animals')
+    # ax1.legend()
+    # ax2.legend()
+    # plt.show()
 
