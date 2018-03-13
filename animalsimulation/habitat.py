@@ -14,7 +14,7 @@ class Habitat(object):
         self.replenish()
 
     def season_temperature(self, season):
-        return HABITAT_DATA[self.type]['average_temperature'][season]
+        return HABITAT_DATA[self.type]['average_temperature'][season.lower()]
 
     def replenish(self):
         self.food_stock += HABITAT_DATA[self.type]['monthly_food']

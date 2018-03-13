@@ -7,7 +7,7 @@ species:
       minimum_breeding_age: 5 #years
       maximum_breeding_age: 20 #years
       gestation_period: 9 #months
-      minimum_temperature: 20 #F
+      minimum_temperature: 30 #F
       maximum_temperature: 110 #F
   - name: bear
     attributes:
