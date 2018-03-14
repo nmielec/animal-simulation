@@ -1,8 +1,8 @@
 import random
 import logging
 
-from .animal import Animal
-from .util import Season, DeathCause, month_to_season, get_data, Gender
+from animal import Animal
+from util import Season, DeathCause, month_to_season, get_data, Gender
 
 ANIMAL_DATA, HABITAT_DATA = get_data()
 
