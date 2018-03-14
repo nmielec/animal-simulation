@@ -1,21 +1,23 @@
 import random
 import logging
 
-from animalsimulation.util import Season, DeathCause, month_to_season, get_data
-from .population import Population
+from .animal import Animal
+from .util import Season, DeathCause, month_to_season, get_data, Gender
 
 ANIMAL_DATA, HABITAT_DATA = get_data()
 
 logging.getLogger(__name__)
 
 class Habitat(object):
-    def __init__(self, type):
+    def __init__(self, type, species):
         self.type = type
         self.food_stock = 0
         self.water_stock = 0
+        self.species = species
         self.replenish()
 
-        self.population = Population()
+        self.population = []
+        self.init_population(num=30, age_in_years=5)
 
     def season_temperature(self, season):
         return HABITAT_DATA[self.type]['average_temperature'][season.lower()]
@@ -51,6 +53,15 @@ class Habitat(object):
 
         self.eliminate_population()
 
+    def init_population(self, num=30, age_in_years=0):
+        """Adds the first num animals to the population"""
+        self.population = []
+        for _ in range(num):
+            gender = random.choice([Gender.MALE, Gender.FEMALE])
+            animal = Animal(self.species, gender)
+            animal.age = age_in_years
+            self.population.append(animal)
+
     def feed_population(self):
         """Get animals to eat and drink, and apply consequences on the habitat
 
@@ -76,7 +87,7 @@ class Habitat(object):
         TODO: there might be a better way to do all this, for example check for pregnancy in the animal tick and somehow communicate the new birth to the simulation
         """
         available_females = [animal for animal in self.population if animal.can_breed()]
-        available_males = self.population.males()
+        available_males = self.get_males()
 
         # Get available females pregnant
         if len(available_males) > 0 and len(available_females) > 0 and month_to_season(self.current_month) == Season.SPRING:
@@ -90,17 +101,17 @@ class Habitat(object):
         for animal in self.population:
             new_population.append(animal)
             if animal.pregnancy_months_remaining == 0:
-                animal_stats = self.animal_stats.loc[animal.id]
-                animal_stats.children += 1
+                # animal_stats = self.animal_stats.loc[animal.id]
+                # animal_stats.children += 1
                 newborn = animal.give_birth()
                 new_population.append(newborn)
-                self.log_animal(newborn)
+                # self.log_animal(newborn)
 
         self.population = new_population
 
     def tick_population(self):
         for animal in self.population:
-            animal.tick()
+            animal.tick(self.current_temperature)
 
     def eliminate_population(self):
         """Removes animals which are dying from the population and logs the death cause
@@ -140,3 +151,8 @@ class Habitat(object):
 
         self.population = new_population
 
+    def get_males(self):
+        return [animal for animal in self.population if animal.is_male()]
+
+    def get_females(self):
+        return [animal for animal in self.population if animal.is_female()]

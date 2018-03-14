@@ -18,16 +18,14 @@ class Simulation(object):
     TODO: the interaction between habitat and animals might be done in the habitat object
     """
     def __init__(self, habitat_type, species, start_month=1):
-        self.habitat = Habitat(habitat_type)
-        self.species = species
+        self.habitat = Habitat(habitat_type, species)
+        # self.species = species
         self.current_year = 0
         self.current_month = start_month
         self.months = 0
 
         self.stats = pd.DataFrame(columns=['elapsed_months', 'year', 'month', 'temperature', 'food_stock', 'water_stock', 'male_population', 'female_population', 'deaths'])
         self.animal_stats = pd.DataFrame(columns=['short_id', 'year_birth', 'month_birth', 'year_death', 'month_death', 'death_cause', 'children'])
-
-        self.init_population(num=10, age_in_years=9)
 
 
     def run_one_month(self):
@@ -71,12 +69,12 @@ class Simulation(object):
         }, ignore_index=True)
 
 
-    def run_n_months(self, n_months):
+    def run_n_months(self, n_months, stop_on_death=True):
         """Runs n months of the simulation"""
         for _ in range(n_months):
             self.run_one_month()
-            if len(self.population) == 0:
-                return
+            if stop_on_death and len(self.habitat.population) == 0:
+                break
 
     def run_year(self):
         """Runs one year of the simulation"""
@@ -88,20 +86,11 @@ class Simulation(object):
 
     def run_while_not_dead(self, max_years=50):
         """Runs the simulation until all animals are dead or max_years have been reached"""
-        while len(self.population) > 0:
+        while len(self.habitat.population) > 0:
             self.run_one_month()
             if self.current_year == max_years:
                 break
 
-    def init_population(self, num=30, age_in_years=0):
-        """Adds the first num animals to the population"""
-        self.population = []
-        for _ in range(num):
-            gender = random.choice([Gender.MALE, Gender.FEMALE])
-            animal = Animal(self.species, gender)
-            animal.age = age_in_years
-            self.population.append(animal)
-            self.log_animal(animal)
 
     def log_animal(self, animal):
         data = {
@@ -117,7 +106,7 @@ class Simulation(object):
         lines = [
             'Simulation : ',
             'Habitat : {}'.format(self.habitat.type),
-            'Species : {}'.format(self.species)
+            'Species : {}'.format(self.habitat.species)
         ]
         return '\n'.join(lines)
 
